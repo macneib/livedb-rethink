@@ -1,10 +1,13 @@
 {
-  "name": "livedb-mongo",
-  "version": "0.3.3",
-  "description": "MongoDB database adapter for livedb",
-  "main": "mongo.js",
+  "name": "livedb-rethink",
+  "version": "0.0.1",
+  "description": "RethinkDB database adapter for livedb",
+  "main": "rethink.js",
   "dependencies": {
-    "mongoskin": "~0.5",
+    "bluebird":"*",
+    "rethinkdb": "1.11.0-4",
+    "mongoskin": "*",
+    "rethinkdbdash": "*",
     "async": "~0.2.9"
   },
   "devDependencies": {
@@ -15,7 +18,7 @@
   "scripts": {
     "test": "mocha --compilers coffee:coffee-script/register --reporter spec --check-leaks test.coffee"
   },
-  "repository": "git://github.com/share/livedb-mongo.git",
-  "author": "Joseph Gentle and Nate Smith",
+  "repository": "git://github.com/macneib/livedb-rethink.git",
+  "author": "Joseph Gentle, Nate Smith and Blair MacNeil",
   "license": "MIT"
 }
