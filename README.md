@@ -1,6 +1,7 @@
 livedb-rethink
 ==============
 
+
 RethinkDB database adapter for [livedb](https://github.com/share/livedb). This driver can be used both as a snapshot
 store and oplog.
 
