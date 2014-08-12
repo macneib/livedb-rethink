@@ -8,9 +8,10 @@ var dbConfig = {
   host: 'localhost',
   port: 28015,
   authKey: '',
-  db: 'test',
+  db: 'docShare',
   tables: {
-    'users': 'id'
+    'users': 'id',
+    'users_ops': 'id'
   }
 };
 
@@ -114,7 +115,7 @@ LiveDbRethink.prototype.getSnapshot = function(cName, docName, callback) {
     if (err) {
       console.log('DB CONNECTION FAILED: ', err);
     } else {
-      r.db('test').table('users').get(docName).run(connection, function(err, doc) {
+      r.db('docShare').table('users').get(docName).run(connection, function(err, doc) {
         if (err) {
           console.log('error', err);
         } else {
@@ -145,7 +146,7 @@ LiveDbRethink.prototype.getSnapshotProjected = function(cName, docName, fields, 
     if (err) {
       console.log('DB CONNECTION FAILED: ', err);
     } else {
-      r.db('test').table('users').get(docName).run(connection, projection, function(err, doc) {
+      r.db('docShare').table('users').get(docName).run(connection, projection, function(err, doc) {
         if (err) {
           console.log('error', err);
         } else {
@@ -183,7 +184,7 @@ LiveDbRethink.prototype.bulkGetSnapshot = function(requests, callback) {
         // It must be a static arguement list, unless you use .apply()
         // and you have to pass the table as an argument to apply too. :/ FML
         var table = r.table('users');
-        r.db('test').table('users').getAll.apply(table, docNames).run(connection, function(err, data) {
+        r.db('docShare').table('users').getAll.apply(table, docNames).run(connection, function(err, data) {
           if (err) {
             console.log('error', err);
           } else {
@@ -226,14 +227,14 @@ LiveDbRethink.prototype.writeSnapshot = function(cName, docName, data, callback)
     if (err) {
       console.log('DB CONNECTION FAILED: ', err);
     } else {
-      r.db('test').table('users').get(docName).run(connection, function(err, results) {
+      r.db('docShare').table('users').get(docName).run(connection, function(err, results) {
         if (err) {
           console.log('error', err);
         } else {
           if (!results) {
             doc.id = docName;
             //console.log('attempt to create doc', docCreate);
-            r.db('test').table('users').insert(docCreate).run(connection, function(err, results) {
+            r.db('docShare').table('users').insert(docCreate).run(connection, function(err, results) {
               if (err) {
                 console.log('error', err);
               } else {
@@ -244,7 +245,7 @@ LiveDbRethink.prototype.writeSnapshot = function(cName, docName, data, callback)
             connection.close();
           } else {
             //console.log('update', docName);
-            r.db('test').table('users').get(docName).update(docCreate).run(connection, function(err, results) {
+            r.db('docShare').table('users').get(docName).update(docCreate).run(connection, function(err, results) {
               if (err) {
                 console.log('error', err);
               } else {
@@ -312,7 +313,7 @@ LiveDbRethink.prototype.writeOp = function(cName, docName, opData, callback) {
     if (err) {
       console.log('DB CONNECTION FAILED: ', err);
     } else {
-      r.db('test').table('users_ops').insert(data).run(connection, function(err, results) {
+      r.db('docShare').table('users_ops').insert(data).run(connection, function(err, results) {
         if (err) {
           console.log('error', err);
         } else {
@@ -343,7 +344,7 @@ LiveDbRethink.prototype.getVersion = function(cName, docName, callback) {
       console.log('DB CONNECTION FAILED: ', err);
     } else {
       // if the docName doesn't exist in db, there may be problems with this.
-      r.db('test').table('users').get(docName).pluck('v').run(connection, function(err, result) {
+      r.db('docShare').table('users').get(docName).pluck('v').run(connection, function(err, result) {
         if (err) {
           console.log('error', err);
         } else {
@@ -389,7 +390,7 @@ LiveDbRethink.prototype.getOps = function(cName, docName, start, end, callback) 
       // It's not great, however it works, and that's what counts right now.
       // Be aware that when end = null the whole array is coming back.
       // I need a strong drink.
-      r.db('test').table('users_ops').between([docName, start], [docName, end], {
+      r.db('docShare').table('users_ops').between([docName, start], [docName, end], {
         index: 'operations',
         left_bound: 'closed',
         right_bound: 'closed'
