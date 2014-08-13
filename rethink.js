@@ -8,7 +8,7 @@ var dbConfig = {
   host: 'localhost',
   port: 28015,
   authKey: '',
-  db: dbConfig.db,
+  db: 'docShare',
   tables: {
     'users': 'id',
     'users_ops': 'id'
@@ -46,6 +46,9 @@ var cursorOperators = {
 // - Operation log for storing all the operations people have submitted. This
 //   is used if a user makes changes while offline and then reconnects. Its
 //   also really useful for auditing user actions.
+//
+//  Note: Before this will work you will need to use DataExplorer create a compound index in users_ops
+//  r.db("docShare").table("users_ops").indexCreate("operations", [r.row("name"), r.row("v")])
 //
 // - Query API, which livedb wraps for live query capabilities.
 //
@@ -108,23 +111,19 @@ LiveDbRethink.prototype.getSnapshot = function(cName, docName, callback) {
   // TODO: Validate cName
   // var err; if (err = this._check(cName)) return callback(err);
 
-  r.connect({
-    host: dbConfig.host,
-    port: dbConfig.port
-  }, function(err, connection) {
-    if (err) {
-      console.log('DB CONNECTION FAILED: ', err);
-    } else {
-      r.db(dbConfig.db).table('users').get(docName).run(connection, function(err, doc) {
-        if (err) {
-          console.log('error', err);
-        } else {
-          //console.log('getSnapshot doc', doc);
-          callback(err, castToSnapshot(doc));
-        }
-        connection.close();
-      });
-    }
+  var p = r.connect(dbConfig);
+
+  p.then(function(conn) {
+    r.table('users').get(docName).run(conn, function(err, doc) {
+      if (err) {
+        console.log('error', err);
+      } else {
+        callback(err, castToSnapshot(doc));
+      }
+    });
+    conn.close();
+  }).error(function(err) {
+    throw err;
   });
 };
 
@@ -139,23 +138,21 @@ LiveDbRethink.prototype.getSnapshotProjected = function(cName, docName, fields, 
   // to be the only types that we really want projections for.
   var projection = projectionFromFields(fields);
 
-  r.connect({
-    host: dbConfig.host,
-    port: dbConfig.port
-  }, function(err, connection) {
-    if (err) {
-      console.log('DB CONNECTION FAILED: ', err);
-    } else {
-      r.db(dbConfig.db).table('users').get(docName).run(connection, projection, function(err, doc) {
-        if (err) {
-          console.log('error', err);
-        } else {
-          console.log('getSnapshot doc', doc);
-          callback(err, castToSnapshot(doc));
-        }
-        connection.close();
-      });
-    }
+  var p = r.connect(dbConfig);
+
+  p.then(function(conn) {
+    r.table('users').get(docName).run(conn, projection, function(err, doc) {
+      if (err) {
+        console.log('error', err);
+      } else {
+        console.log('getSnapshot doc', doc);
+        callback(err, castToSnapshot(doc));
+      }
+      conn.close();
+    }).error(function(err) {
+      throw err;
+    });
+
   });
 };
 
@@ -173,30 +170,28 @@ LiveDbRethink.prototype.bulkGetSnapshot = function(requests, callback) {
     var cResult = results[cName] = {};
     var docNames = requests[cName];
 
-    r.connect({
-      host: dbConfig.host,
-      port: dbConfig.port
-    }, function(err, connection) {
-      if (err) {
-        console.log('DB CONNECTION FAILED: ', err);
-      } else {
-        // remember kids: arrays of ids can't be passed in the getAll function.
-        // It must be a static arguement list, unless you use .apply()
-        // and you have to pass the table as an argument to apply too. :/ FML
-        var table = r.table('users');
-        r.db(dbConfig.db).table('users').getAll.apply(table, docNames).run(connection, function(err, data) {
-          if (err) {
-            console.log('error', err);
-          } else {
-            data = data && data.map(castToSnapshot);
-            for (var i = 0; i < data.length; i++) {
-              cResult[data[i].docName] = data[i];
-            }
-            callback();
+
+    var p = r.connect(dbConfig);
+
+    p.then(function(conn) {
+      // One does not simply pass arrays of ids through the getAll function.
+      // It must be a static arguement list.
+      // and you have to pass the table as an argument to apply too. :/ FML
+      var table = r.table('users');
+      r.table('users').getAll.apply(table, docNames).run(conn, function(err, data) {
+        if (err) {
+          console.log('error', err);
+        } else {
+          data = data && data.map(castToSnapshot);
+          for (var i = 0; i < data.length; i++) {
+            cResult[data[i].docName] = data[i];
           }
-          connection.close();
-        });
-      }
+          callback();
+        }
+        conn.close();
+      });
+    }).error(function(err) {
+      throw err;
     });
   };
 
@@ -210,6 +205,7 @@ LiveDbRethink.prototype.writeSnapshot = function(cName, docName, data, callback)
   //console.log('writeSnapshot', cName, docName, data);
   //var err; if (err = this._check(cName)) return callback(err);
   var doc = castToDoc(docName, data);
+
   var docCreate = {
     id: doc.id,
     startLength: doc.startLength,
@@ -219,22 +215,18 @@ LiveDbRethink.prototype.writeSnapshot = function(cName, docName, data, callback)
     v: doc.v,
     m: doc.m,
   };
-  // I don't think this is going to work but whatever... nothing works right now.
-  r.connect({
-    host: dbConfig.host,
-    port: dbConfig.port
-  }, function(err, connection) {
-    if (err) {
-      console.log('DB CONNECTION FAILED: ', err);
-    } else {
-      r.db(dbConfig.db).table('users').get(docName).run(connection, function(err, results) {
+
+  var p = r.connect(dbConfig);
+
+  p.then(function(conn) {
+      r.db(dbConfig.db).table('users').get(docName).run(conn, function(err, results) {
         if (err) {
           console.log('error', err);
         } else {
           if (!results) {
             doc.id = docName;
             //console.log('attempt to create doc', docCreate);
-            r.db(dbConfig.db).table('users').insert(docCreate).run(connection, function(err, results) {
+            r.db(dbConfig.db).table('users').insert(docCreate).run(conn, function(err, results) {
               if (err) {
                 console.log('error', err);
               } else {
@@ -242,23 +234,24 @@ LiveDbRethink.prototype.writeSnapshot = function(cName, docName, data, callback)
                 callback();
               }
             });
-            connection.close();
+            conn.close();
           } else {
             //console.log('update', docName);
-            r.db(dbConfig.db).table('users').get(docName).update(docCreate).run(connection, function(err, results) {
+            r.db(dbConfig.db).table('users').get(docName).update(docCreate).run(conn, function(err, results) {
               if (err) {
                 console.log('error', err);
               } else {
                 //console.log('created doc', results);
                 callback();
               }
-              connection.close();
+              conn.close();
             });
           }
         }
-        connection.close();
+        conn.close();
       });
-    }
+  }).error(function(err) {
+    throw err;
   });
 };
 
@@ -280,15 +273,12 @@ LiveDbRethink.prototype._opCollection = function(cName) {
 LiveDbRethink.prototype.writeOp = function(cName, docName, opData, callback) {
   //console.log('writeOp', cName, docName, opData);
 
-  assert(opData.v != null);
+  assert(opData.v !== null);
 
   // TODO validate cName
   // var err; if (err = this._check(cName)) return callback(err);
-  //var self = this;
-  //console.log('shallowClone', shallowClone(opData));
-  var data = shallowClone(opData);
 
- // console.log('preValidate', data.preValidate);
+  var data = shallowClone(opData);
 
   // hack to get around undefined insert errror in rethink.
   if (data.preValidate === undefined) {
@@ -301,32 +291,23 @@ LiveDbRethink.prototype.writeOp = function(cName, docName, opData, callback) {
     data.op = {};
   }
 
-  //console.log('data post shallowClone', data);
-  //data._id = docName + ' v' + opData.v,
   data.name = docName;
 
-  // I don't think this is going to work but whatever... nothing works right now.
-  r.connect({
-    host: dbConfig.host,
-    port: dbConfig.port
-  }, function(err, connection) {
-    if (err) {
-      console.log('DB CONNECTION FAILED: ', err);
-    } else {
-      r.db(dbConfig.db).table('users_ops').insert(data).run(connection, function(err, results) {
-        if (err) {
-          console.log('error', err);
-        } else {
-          //console.log('writeOp results', results);
-          callback();
-        }
-        connection.close();
-      });
-    }
+  var p = r.connect(dbConfig);
+
+  p.then(function(conn) {
+    r.db(dbConfig.db).table('users_ops').insert(data).run(conn, function(err, results) {
+      if (err) {
+        console.log('error', err);
+      } else {
+        //console.log('writeOp results', results);
+        callback();
+      }
+      conn.close();
+    });
+  }).error(function(err) {
+    throw err;
   });
-
-
-  // this._opCollection(cName).save(data, callback);
 
 };
 
@@ -335,31 +316,27 @@ LiveDbRethink.prototype.getVersion = function(cName, docName, callback) {
   // TODO validate cName
   // var err; if (err = this._check(cName)) return callback(err);
 
-  // I don't think this is going to work but whatever... nothing works right now.
-  r.connect({
-    host: dbConfig.host,
-    port: dbConfig.port
-  }, function(err, connection) {
-    if (err) {
-      console.log('DB CONNECTION FAILED: ', err);
-    } else {
-      // if the docName doesn't exist in db, there may be problems with this.
 
-      r.db(dbConfig.db).table('users').get(docName).pluck('v').run(connection, function(err, result) {
+  var p = r.connect(dbConfig);
 
-        if (err) {
-          console.log('error', err);
+  p.then(function(conn) {
+    // if the docName doesn't exist in db, there may be problems with this.
+    r.db(dbConfig.db).table('users').get(docName).pluck('v').run(conn, function(err, result) {
+
+      if (err) {
+        console.log('error', err);
+      } else {
+        //expect a single result or a null
+        if (result === []) {
+          callback(null, 0);
         } else {
-          //expect a single result or a null
-          if (result === []) {
-            callback(null, 0);
-          } else {
-            callback(err, result.v + 1);
-          }
+          callback(err, result.v + 1);
         }
-        connection.close();
-      });
-    }
+      }
+      conn.close();
+    });
+  }).error(function(err) {
+    throw err;
   });
 };
 
@@ -376,52 +353,43 @@ LiveDbRethink.prototype.getOps = function(cName, docName, start, end, callback) 
 
   start = start.toString();
 
+  var p = r.connect(dbConfig);
 
+  p.then(function(conn) {
+    // Here's the skinny:
+    // There's a compound index used in RethinkDb that takes two sets of values, they are [docName, start] and [docName, end]
+    // This will return as an unordered array.  It's up to you to sort it by version.
+    // The hack employed here deals the 'end' object specifiaclly when it is passed to getOps as null. We change end value into a string and pass it on.
+    // It's not great, however it works, and that's what counts right now.
+    // Be aware that when end = null the whole array is coming back.
+    // I need a strong drink.
 
-  r.connect({
-    host: dbConfig.host,
-    port: dbConfig.port
-  }, function(err, connection) {
-    if (err) {
-      console.log('DB CONNECTION FAILED: ', err);
-    } else {
-      // Here's the skinny:
-      // There's a compound index used in RethinkDb that takes two sets of values, they are [docName, start] and [docName, end]
-      // This will return as an unordered array.  It's up to you to sort it by version.
-      // The hack employed here deals the 'end' object specifiaclly when it is passed to getOps as null. We change end value into a string and pass it on.
-      // It's not great, however it works, and that's what counts right now.
-      // Be aware that when end = null the whole array is coming back.
-      // I need a strong drink.
-
-      r.db(dbConfig.db).table('users_ops').between([docName, start], [docName, end], {
-
-        index: 'operations',
-        left_bound: 'closed',
-        right_bound: 'closed'
-      }).run(connection, function(err, cursor) {
-        if (err) {
-          console.log('error', err);
-        } else {
-          cursor.toArray(function(err, results) {
-            if (err) {
-              throw err;
-            }
-            // Sort the results according to version.
-            var sorted = results.sort(function(a, b) {
-              return a.v - b.v;
-            });
-            //console.log('sorted', sorted);
-            callback(null, sorted);
+    r.table('users_ops').between([docName, start], [docName, end], {
+      index: 'operations',
+      left_bound: 'closed',
+      right_bound: 'closed'
+    }).run(conn, function(err, cursor) {
+      if (err) {
+        console.log('error', err);
+      } else {
+        cursor.toArray(function(err, results) {
+          if (err) {
+            throw err;
+          }
+          // Sort the results according to version.
+          var sorted = results.sort(function(a, b) {
+            return a.v - b.v;
           });
+          //console.log('sorted', sorted);
+          callback(null, sorted);
+        });
 
-        }
-      });
-    }
-    connection.close();
+      }
+    });
+  }).error(function(err) {
+    throw err;
   });
 };
-
-
 
 /*Query methods*/
 
@@ -578,4 +546,3 @@ function projectionFromFields(fields) {
   return projection;
 
 }
-
