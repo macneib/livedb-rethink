@@ -5,9 +5,56 @@ livedb-rethink
 RethinkDB database adapter for [livedb](https://github.com/share/livedb).
 This driver can be used both as a snapshot store and oplog.
 
+## Install
+
+```sh
+npm install --save livedb-rethink
+```
+
+## Schema
+
+### Requirements
+
+TODO
+
+#### Snapshots Table
+
+TODO
+
+#### Operations Table
+
+TODO
+
+
+### Example
+
+Here is an example statement that will work with livedb-rethinkdb
+
+```javascript
+
+TODO
+
+```
+
+## Usage
+
+```javascript
+
+TODO
+
+```
+
+
+## Testing
+
+After creating database tables:
+
+```sh
+npm test
+```
+
 ## Warning
 This code is very new, untested and not definitely not optimized.
-It's not ready for production environments.
 
 ## MIT License
 Copyright (c) 2013 by Blair MacNeil and Simon Clampitt
