@@ -1,22 +1,33 @@
 {
   "name": "livedb-rethink",
   "version": "0.0.1",
-  "description": "RethinkDB database adapter for livedb",
+  "description": "RethinkDB database adapter for Livedb",
   "main": "rethink.js",
   "dependencies": {
-    "rethinkdb": "*",
+    "assert":"~1.3.0",
     "async": "~0.2.9",
-    "lodash": "~2.4.1"
+    "rethinkdb": "~1.16.2"
   },
   "devDependencies": {
-    "mocha": "~1",
-    "livedb": ">=0.3"
+    "mocha": ">=2.2.1",
+    "livedb": ">=0.5.7 "
   },
   "scripts": {
     "test": ""
   },
-  "repository": "git://github.com/macneib/livedb-rethink.git",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/macneib/livedb-rethink.git"
+  },
   "author": "Blair MacNeil and Simon Clampitt",
-  "license": "MIT"
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/macneib/livedb-rethink/issues"
+  },
+  "homepage": "https://github.com/macneib/livedb-rethink",
+  "keywords": [
+    "sharejs",
+    "livedb",
+    "rethinkdb"
+  ]
 }
-

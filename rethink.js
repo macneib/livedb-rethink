@@ -114,7 +114,9 @@ LiveDbRethink.prototype.getSnapshot = function(cName, docName, callback) {
   var p = r.connect(dbConfig);
 
   p.then(function(conn) {
-    r.table('users').get(docName).run(conn, function(err, doc) {
+    r.table('users')
+    .get(docName)
+    .run(conn, function(err, doc) {
       if (err) {
         console.log('error', err);
       } else {
@@ -122,7 +124,8 @@ LiveDbRethink.prototype.getSnapshot = function(cName, docName, callback) {
       }
     });
     conn.close();
-  }).error(function(err) {
+  })
+  .error(function(err) {
     throw err;
   });
 };
@@ -141,7 +144,9 @@ LiveDbRethink.prototype.getSnapshotProjected = function(cName, docName, fields, 
   var p = r.connect(dbConfig);
 
   p.then(function(conn) {
-    r.table('users').get(docName).run(conn, projection, function(err, doc) {
+    r.table('users')
+    .get(docName)
+    .run(conn, projection, function(err, doc) {
       if (err) {
         console.log('error', err);
       } else {
@@ -178,7 +183,10 @@ LiveDbRethink.prototype.bulkGetSnapshot = function(requests, callback) {
       // It must be a static arguement list.
       // and you have to pass the table as an argument to apply too. :/ FML
       var table = r.table('users');
-      r.table('users').getAll.apply(table, docNames).run(conn, function(err, data) {
+      r.table('users')
+      .getAll
+      .apply(table, docNames)
+      .run(conn, function(err, data) {
         if (err) {
           console.log('error', err);
         } else {
