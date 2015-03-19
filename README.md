@@ -19,20 +19,71 @@ TODO
 
 #### Snapshots Table
 
-TODO
+```javascript
+
+{
+	"data":  "Intersting text" ,
+	"id":  "docName" ,
+	"m": {
+		"ctime": 1426789227620 ,
+		"mtime": 1426790262477
+	} ,
+	"type": http://sharejs.org/types/textv1, »
+	"v": 0
+}
+
+```
 
 #### Operations Table
 
-TODO
-
+```javascript
+{
+	"id":  "docName v1" ,
+	"m": {
+		"ts": 1426789258264
+	} ,
+	"name":  "docName" ,
+	"op": [
+		15 ,
+		"0" ,
+		25 ,
+		"Intersting text"
+	] ,
+	"preValidate": { } ,
+	"seq": 2 ,
+	"src":  "d73321d8db0fa4c51c28bdc57d22152f" ,
+	"v": 1 ,
+	"validate": { }
+}
+```
 
 ### Example
 
-Here is an example statement that will work with livedb-rethinkdb
+Here is an example statement that will work with sharejs and livedb-rethinkdb
+note: you should already create a db called 'docShare' with two tables: 'users' and 'users_ops'
+In the RethinkDD Data Explorer you should create a  compoundIndex like so
+```javascript
+r.db("docShare").table("users_ops").indexCreate("operations", [r.row("name"), r.row("v")])
+```
+now you can try
 
 ```javascript
 
-TODO
+var livedb = require('livedb');
+var sharejs = require('share');
+
+var dbConfig = {
+  host: 'localhost',
+  port: 28015,
+  authKey: '',
+  db: 'docShare',
+};
+
+var livedbrethink = require('livedb-rethink');
+var db = require('livedb-rethink')(dbConfig);
+
+var backend = livedb.client(db);
+var share = sharejs.server.createClient({backend: backend});
 
 ```
 
